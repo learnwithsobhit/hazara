@@ -1,6 +1,14 @@
-# Not deployed. One replica until a match has an ownership epoch.
-# Start the API locally with `cargo run -p hazara-server` from backend/.
+# Railway config-as-code for hazara-server.
+# Dashboard: connect this repo, set env from deployment/railway.env.example.
+# One replica: the file store is not shared across instances.
+
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
 
 [deploy]
 numReplicas = 1
+healthcheckPath = "/healthz"
+healthcheckTimeout = 300
 restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 5

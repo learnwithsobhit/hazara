@@ -7,13 +7,18 @@ import 'package:url_launcher/url_launcher.dart';
 
 enum ShareChannel { whatsapp, telegram, x, system, copy }
 
+const String kPublicWebOrigin = String.fromEnvironment(
+  'PUBLIC_WEB_ORIGIN',
+  defaultValue: 'https://hazara-lws-260731.web.app',
+);
+
 /// Build the canonical room URL.
 String roomUrl(String code) {
   if (kIsWeb) {
     final origin = Uri.base.origin;
     return '$origin/?room=$code';
   }
-  return 'https://hazara.app/?room=$code';
+  return '$kPublicWebOrigin/?room=$code';
 }
 
 /// The share text sent to friends. Copy and chat get the join URL only —

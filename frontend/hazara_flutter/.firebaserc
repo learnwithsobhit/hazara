@@ -1,0 +1,15 @@
+{
+  "projects": {
+    "default": "judgment-lws-260731"
+  },
+  "targets": {
+    "judgment-lws-260731": {
+      "hosting": {
+        "prod": [
+          "hazara-lws-260731"
+        ]
+      }
+    }
+  },
+  "etags": {}
+}

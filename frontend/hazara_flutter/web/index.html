@@ -14,11 +14,14 @@
   <meta name="description" content="HAZARA — Four people. One table. Room code. Play Pagat Hazari card game online with friends, no account required.">
   <meta name="theme-color" content="#0C241E">
 
-  <!-- Open Graph -->
+  <!-- Open Graph / WhatsApp / iMessage (absolute URLs stamped from PUBLIC_WEB_ORIGIN) -->
   <meta property="og:type" content="website">
+  <meta property="og:site_name" content="HAZARA">
   <meta property="og:title" content="HAZARA · Play Pagat Hazari">
   <meta property="og:description" content="Four people. One table. Room code. Play Pagat Hazari card game with friends — no account required.">
-  <meta property="og:image" content="icons/og-image.png">
+  <meta property="og:url" content="__WEB_ORIGIN__/">
+  <meta property="og:image" content="__WEB_ORIGIN__/icons/og-image.png">
+  <meta property="og:image:type" content="image/png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
 
@@ -26,7 +29,7 @@
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="HAZARA · Play Pagat Hazari">
   <meta name="twitter:description" content="Four people. One table. Room code.">
-  <meta name="twitter:image" content="icons/og-image.png">
+  <meta name="twitter:image" content="__WEB_ORIGIN__/icons/og-image.png">
 
   <!-- iOS -->
   <meta name="mobile-web-app-capable" content="yes">
@@ -107,7 +110,7 @@
     <div class="loading-bar"><div class="loading-bar-fill"></div></div>
   </div>
 
-  <script src="flutter_bootstrap.js" async></script>
+  <script src="flutter_bootstrap.js?v=BUILD_ID" async></script>
 
   <script>
     function hideHazaraSplash() {

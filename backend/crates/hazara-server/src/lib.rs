@@ -7,6 +7,7 @@
 //! HAZARA_BIND        — host:port to listen on (default: 127.0.0.1:8080)
 //! PORT               — alternative port variable (Railway convention)
 //! HAZARA_CORS_ORIGIN — comma-separated allowed origins; empty = permissive (dev only)
+//! ALLOWED_ORIGINS    — Judgement-compatible alias used when HAZARA_CORS_ORIGIN is empty
 
 pub mod store;
 pub mod table;
@@ -333,7 +334,11 @@ async fn no_store(request: axum::extract::Request, next: Next) -> Response {
 }
 
 fn build_cors() -> tower_http::cors::CorsLayer {
-    let origins_raw = std::env::var("HAZARA_CORS_ORIGIN").unwrap_or_default();
+    let origins_raw = std::env::var("HAZARA_CORS_ORIGIN")
+        .ok()
+        .filter(|s| !s.trim().is_empty())
+        .or_else(|| std::env::var("ALLOWED_ORIGINS").ok())
+        .unwrap_or_default();
     let trimmed: Vec<&str> = origins_raw
         .split(',')
         .map(str::trim)

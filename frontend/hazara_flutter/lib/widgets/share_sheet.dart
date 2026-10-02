@@ -16,7 +16,7 @@ Future<void> showHazaraShareSheet({
   String hostName = '',
   String? customText,
 }) {
-  final url = code.isEmpty ? (kIsWeb ? Uri.base.origin : 'https://hazara.app') : roomUrl(code);
+  final url = code.isEmpty ? (kIsWeb ? Uri.base.origin : kPublicWebOrigin) : roomUrl(code);
   final text = customText ?? inviteText(hostName, code);
   return showModalBottomSheet<void>(
     context: context,
