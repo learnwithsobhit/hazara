@@ -25,23 +25,35 @@ pub struct RoomPreview {
 pub enum ClientMessage {
     Ping,
     Pong,
-    SaveDraft { sets: Vec<Vec<String>> },
+    SaveDraft {
+        sets: Vec<Vec<String>>,
+    },
     Ready {
         action_id: String,
         sets: Vec<Vec<String>>,
     },
-    NextDeal { summary_id: Option<u64> },
+    NextDeal {
+        summary_id: Option<u64>,
+    },
     Rematch,
     ForceEnd,
-    Reaction { emoji: String },
-    TalkText { text: String },
-    Sound { sound: String },
+    Reaction {
+        emoji: String,
+    },
+    TalkText {
+        text: String,
+    },
+    Sound {
+        sound: String,
+    },
     Voice {
         mime: String,
         duration_ms: u64,
         audio_b64: String,
     },
-    Nudge { name: Option<String> },
+    Nudge {
+        name: Option<String>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -49,8 +61,12 @@ pub enum ClientMessage {
 pub enum ServerMessage {
     Pong,
     Ping,
-    Snapshot { snapshot: serde_json::Value },
-    Error { message: String },
+    Snapshot {
+        snapshot: serde_json::Value,
+    },
+    Error {
+        message: String,
+    },
     Talk {
         kind: String,
         from: String,

@@ -4,6 +4,7 @@ members = [
     "crates/hazara-domain",
     "crates/hazara-engine",
     "crates/hazara-protocol",
+    "crates/hazara-persistence",
     "crates/hazara-server",
 ]
 

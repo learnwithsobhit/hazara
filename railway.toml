@@ -1,6 +1,7 @@
 # Railway config-as-code for hazara-server.
 # Dashboard: connect this repo, set env from deployment/railway.env.example.
-# One replica: the file store is not shared across instances.
+# One replica: each match is owned by one process. Postgres is shared storage,
+# not a second writer.
 
 [build]
 builder = "DOCKERFILE"

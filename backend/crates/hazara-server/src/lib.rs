@@ -1,14 +1,18 @@
 //! Local friends tables. One Tokio task owns each live match.
-//! The deal is written to disk before the table acknowledges a move.
-//! Restarting the process restores those files. Card faces are not logged.
+//! The deal is written before the table acknowledges a move.
+//! `DATABASE_URL` selects Postgres; otherwise the process uses files under `HAZARA_STATE`.
+//! Restarting the process restores active matches. Card faces are not logged.
 //!
 //! # Configuration
-//! HAZARA_STATE       — directory that holds store files (default: hazara-data)
-//! HAZARA_BIND        — host:port to listen on (default: 127.0.0.1:8080)
-//! PORT               — alternative port variable (Railway convention)
-//! HAZARA_CORS_ORIGIN — comma-separated allowed origins; empty = permissive (dev only)
-//! ALLOWED_ORIGINS    — Judgement-compatible alias used when HAZARA_CORS_ORIGIN is empty
+//! DATABASE_URL          — Postgres URL; unset keeps the file store
+//! HAZARA_MIGRATIONS_DIR — SQL migrations directory when using Postgres
+//! HAZARA_STATE          — directory that holds store files (default: hazara-data)
+//! HAZARA_BIND           — host:port to listen on (default: 127.0.0.1:8080)
+//! PORT                  — alternative port variable (Railway convention)
+//! HAZARA_CORS_ORIGIN    — comma-separated allowed origins; empty = permissive (dev only)
+//! ALLOWED_ORIGINS       — Judgement-compatible alias used when HAZARA_CORS_ORIGIN is empty
 
+mod postgres_store;
 pub mod store;
 pub mod table;
 mod talk;
@@ -26,6 +30,7 @@ use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
 use axum::{Json, Router};
 use hazara_domain::Card;
+use postgres_store::PostgresStore;
 use serde::Deserialize;
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
@@ -38,7 +43,7 @@ use uuid::Uuid;
 
 /// Two hours in milliseconds — lobby rooms empty of players are reaped after this.
 const ROOM_IDLE_TTL_MS: u64 = 2 * 60 * 60 * 1000;
-/// 24 hours — orphaned match files older than this are deleted.
+/// 24 hours — finished matches older than this are deleted.
 const MATCH_ORPHAN_TTL_MS: u64 = 24 * 60 * 60 * 1000;
 /// Draft saves within this window are coalesced (a save happens on the trailing edge).
 const DRAFT_DEBOUNCE_MS: u64 = 300;
@@ -148,6 +153,34 @@ struct Sub {
     tx: mpsc::UnboundedSender<String>,
 }
 
+async fn open_store() -> Result<Arc<dyn MatchStore>, String> {
+    let url = std::env::var("DATABASE_URL").unwrap_or_default();
+    if url.trim().is_empty() {
+        let dir = std::env::var("HAZARA_STATE").unwrap_or_else(|_| "hazara-data".into());
+        info!(store = %dir, "file store");
+        let store = FileStore::open(&dir).await?;
+        return Ok(Arc::new(store));
+    }
+    let migrations = migrations_dir();
+    info!(migrations = %migrations.display(), "postgres store");
+    let store = PostgresStore::open(url.trim(), &migrations).await?;
+    Ok(Arc::new(store))
+}
+
+fn migrations_dir() -> std::path::PathBuf {
+    if let Ok(dir) = std::env::var("HAZARA_MIGRATIONS_DIR") {
+        if !dir.trim().is_empty() {
+            return std::path::PathBuf::from(dir);
+        }
+    }
+    let compiled = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../hazara-persistence/migrations");
+    if compiled.is_dir() {
+        return compiled;
+    }
+    std::path::PathBuf::from("crates/hazara-persistence/migrations")
+}
+
 /// Boot the HTTP + WebSocket server. Called from the binary crate.
 pub async fn run() {
     // Structured logging. Use RUST_LOG to control verbosity.
@@ -158,10 +191,8 @@ pub async fn run() {
         )
         .init();
 
-    let dir = std::env::var("HAZARA_STATE").unwrap_or_else(|_| "hazara-data".into());
-
-    let store = match FileStore::open(&dir).await {
-        Ok(s) => Arc::new(s) as Arc<dyn MatchStore>,
+    let store: Arc<dyn MatchStore> = match open_store().await {
+        Ok(store) => store,
         Err(message) => {
             error!(error = %message, "could not open store");
             std::process::exit(1);
@@ -219,10 +250,7 @@ pub async fn run() {
             };
             spawn_match(&mut lobby, store.clone(), match_id, table);
         }
-        info!(
-            matches = pending_matches.len(),
-            "restored matches from disk"
-        );
+        info!(matches = pending_matches.len(), "restored active matches");
     }
 
     // Bind address: HAZARA_BIND wins, then PORT (Railway), then default.
@@ -274,7 +302,11 @@ pub async fn run() {
             std::process::exit(1);
         }
     };
-    info!(addr = %addr, store = %dir, "hazara-server ready");
+    let using_postgres = !std::env::var("DATABASE_URL")
+        .unwrap_or_default()
+        .trim()
+        .is_empty();
+    info!(addr = %addr, postgres = using_postgres, "hazara-server ready");
 
     // Graceful shutdown on Ctrl-C / SIGTERM.
     let shutdown = async {
@@ -1376,9 +1408,7 @@ async fn auth(app: &App, headers: &HeaderMap) -> Result<Guest, ApiError> {
 }
 
 /// Bind an empty server on `127.0.0.1:0` for integration tests.
-pub async fn serve_for_test(
-    dir: impl AsRef<std::path::Path>,
-) -> Result<SocketAddr, String> {
+pub async fn serve_for_test(dir: impl AsRef<std::path::Path>) -> Result<SocketAddr, String> {
     let store = FileStore::open(dir).await?;
     let store: Arc<dyn MatchStore> = Arc::new(store);
     let app = App {

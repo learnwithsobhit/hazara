@@ -35,7 +35,13 @@ async fn get_json(base: &str, path: &str, token: Option<&str>) -> reqwest::Respo
 }
 
 async fn guest(base: &str, name: &str) -> String {
-    let body = post_json(base, "/api/v1/guest-sessions", None, json!({ "name": name })).await;
+    let body = post_json(
+        base,
+        "/api/v1/guest-sessions",
+        None,
+        json!({ "name": name }),
+    )
+    .await;
     body["token"].as_str().unwrap().to_string()
 }
 
@@ -43,9 +49,7 @@ async fn connect_ws(
     base_http: &str,
     match_id: &str,
     token: &str,
-) -> tokio_tungstenite::WebSocketStream<
-    tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>,
-> {
+) -> tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>> {
     let ticket = post_json(
         base_http,
         &format!("/api/v1/matches/{match_id}/ticket"),
@@ -54,8 +58,7 @@ async fn connect_ws(
     )
     .await;
     let ticket = ticket["ticket"].as_str().expect("ticket");
-    let ws_url = base_http
-        .replacen("http://", "ws://", 1)
+    let ws_url = base_http.replacen("http://", "ws://", 1)
         + &format!("/api/v1/matches/{match_id}/ws?ticket={ticket}");
     let (ws, _) = tokio_tungstenite::connect_async(ws_url).await.unwrap();
     ws
@@ -164,10 +167,7 @@ async fn four_clients_deal_reconnect_and_lock() {
     }
 
     for (i, ws) in sockets.iter_mut().enumerate() {
-        let cards: Vec<_> = hands[i]
-            .iter()
-            .filter_map(|id| parse_card(id))
-            .collect();
+        let cards: Vec<_> = hands[i].iter().filter_map(|id| parse_card(id)).collect();
         let sets = deterministic_legal(&cards).expect("legal hand");
         let payload = json!({
             "type": "ready",
@@ -177,9 +177,7 @@ async fn four_clients_deal_reconnect_and_lock() {
                 .map(|group| group.iter().map(|c| c.id()).collect::<Vec<_>>())
                 .collect::<Vec<_>>(),
         });
-        ws.send(Message::Text(payload.to_string().into()))
-            .await
-            .unwrap();
+        ws.send(Message::Text(payload.to_string())).await.unwrap();
     }
 
     let mut saw_reveal = false;

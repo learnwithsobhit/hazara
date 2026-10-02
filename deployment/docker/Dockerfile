@@ -15,11 +15,13 @@ RUN apt-get update \
     && chown nobody:nogroup /data
 WORKDIR /srv
 COPY --from=builder /app/backend/target/release/hazara-server /usr/local/bin/hazara-server
+COPY --from=builder /app/backend/crates/hazara-persistence/migrations /srv/migrations
 COPY deployment/docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 ENV RUST_LOG=info
 ENV PORT=8080
 ENV HAZARA_STATE=/data
+ENV HAZARA_MIGRATIONS_DIR=/srv/migrations
 EXPOSE 8080
 HEALTHCHECK --interval=10s --timeout=3s --start-period=10s --retries=3 \
   CMD curl -fsS http://127.0.0.1:8080/healthz || exit 1

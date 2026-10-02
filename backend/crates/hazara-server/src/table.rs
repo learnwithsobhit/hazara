@@ -1027,9 +1027,7 @@ mod tests {
         assert!(table.ready(1, "lock-1", sets).unwrap());
         table.disconnect(1);
         let new_id = Uuid::new_v4();
-        let seat = table
-            .claim_vacant_seat(new_id, "Eve".into())
-            .unwrap();
+        let seat = table.claim_vacant_seat(new_id, "Eve".into()).unwrap();
         assert_eq!(seat, 1);
         let snap = table.snapshot(1);
         assert_eq!(snap.seats[1].name, "Eve");

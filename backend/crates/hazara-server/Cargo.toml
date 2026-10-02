@@ -9,6 +9,7 @@ axum = { version = "0.7", features = ["ws"] }
 async-trait = "0.1"
 hazara-domain = { path = "../hazara-domain" }
 hazara-engine = { path = "../hazara-engine" }
+hazara-persistence = { path = "../hazara-persistence" }
 hazara-protocol = { path = "../hazara-protocol" }
 rand = "0.8"
 serde = { version = "1", features = ["derive"] }

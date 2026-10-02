@@ -2,7 +2,7 @@
 
 Four-player Pagat Hazari. This repository is separate from Judgement.
 
-**Friends table:** four people join a room code. The server writes the deal under `HAZARA_STATE` (default `backend/hazara-data/`) before it accepts a move. Restarting the server restores the same phase and the same hand. Those files contain private cards. Do not commit them, and do not print them. There is no public queue, no ratings, and no computer player.
+**Friends table:** four people join a room code. Before it accepts a move, the server writes the deal to Postgres when `DATABASE_URL` is set, or under `HAZARA_STATE` (default `backend/hazara-data/`) otherwise. Restarting the server restores active matches. Those records contain private cards. Do not commit them, and do not print them. There is no public queue, no ratings, and no computer player.
 
 ## Rules engine
 
@@ -38,7 +38,7 @@ Release web is baked with `--dart-define=API_BASE=...`. Local debug defaults to 
 
 ## Deploy
 
-Same split as Judgement: **Firebase Hosting** for Flutter web, **Railway** for `hazara-server`. One replica (file store is not shared). Mount a Railway volume at `/data` and set `HAZARA_STATE=/data`.
+Same split as Judgement: **Firebase Hosting** for Flutter web, **Railway** for `hazara-server`, **Railway Postgres** for guests, rooms, and match snapshots. One replica (a match has one in-process owner). Set `DATABASE_URL` from the Postgres plugin. `HAZARA_MIGRATIONS_DIR` is `/srv/migrations` in the image. Without `DATABASE_URL` the process still uses the `/data` volume.
 
 ```bash
 # API (from repo root, after railway link)
