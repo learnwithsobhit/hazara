@@ -1,5 +1,7 @@
 //! Local friends tables. One Tokio task owns each live match.
-//! The deal is written before the table acknowledges a move.
+//! Players hear about a move before it is written, so a Ready status and the
+//! score step are not stuck behind the database. Writes are coalesced: a newer
+//! snapshot replaces one that has not been saved yet.
 //! `DATABASE_URL` selects Postgres; otherwise the process uses files under `HAZARA_STATE`.
 //! Restarting the process restores active matches. Card faces are not logged.
 //!
@@ -906,6 +908,26 @@ async fn run_match(
     let mut subs: Vec<Sub> = Vec::new();
     let mut pace: HashMap<Uuid, Pace> = HashMap::new();
 
+    // Persistence stays off this loop. A Ready click broadcasts first; the
+    // writer keeps only the newest snapshot so a slow database cannot stall
+    // the next player's status or the start of scoring.
+    let (persist_tx, mut persist_rx) = mpsc::unbounded_channel();
+    let persist_store = Arc::clone(&store);
+    let persist_task = tokio::spawn(async move {
+        while let Some(mut snapshot) = persist_rx.recv().await {
+            while let Ok(newer) = persist_rx.try_recv() {
+                snapshot = newer;
+            }
+            if persist_store
+                .put_match(match_id, snapshot)
+                .await
+                .is_err()
+            {
+                error!(%match_id, "match could not be saved");
+            }
+        }
+    });
+
     // Draft-save debouncing: when a save_draft comes in we want to wait up to
     // DRAFT_DEBOUNCE_MS before actually writing, so that rapid taps do not each
     // trigger a disk write.  We track whether a debounced save is pending.
@@ -1003,36 +1025,26 @@ async fn run_match(
                 if do_save {
                     draft_pending = false;
                     draft_deadline = None;
-                    if store.put_match(match_id, table.export()).await.is_err() {
-                        error!(%match_id, "match could not be saved");
-                        if let Some((player, _)) = reply {
-                            send_to(
-                                &subs,
-                                player,
-                                error_frame("The table could not save that. Try again."),
-                            );
-                        }
-                        continue;
-                    }
                     if let Some((player, text)) = reply {
                         send_to(&subs, player, text);
                     }
                     arm_clocks(&table, &tx, &mut reveal_armed);
                     broadcast(&table, &mut subs);
+                    let _ = persist_tx.send(table.export());
                 }
             }
 
-            // Debounced draft flush.
+            // Debounced draft flush. Queued, not awaited, so a Ready is not
+            // stuck behind a draft write.
             _ = draft_wait, if draft_pending => {
                 draft_pending = false;
                 draft_deadline = None;
-                if store.put_match(match_id, table.export()).await.is_err() {
-                    warn!(%match_id, "draft save failed");
-                }
-                // No broadcast needed for a draft save — no state changed visibly.
+                let _ = persist_tx.send(table.export());
             }
         }
     }
+    drop(persist_tx);
+    let _ = persist_task.await;
 }
 
 fn apply_client(
