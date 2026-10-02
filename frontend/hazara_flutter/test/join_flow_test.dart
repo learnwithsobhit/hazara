@@ -71,6 +71,29 @@ void main() {
     expect(find.text('ashish'), findsNothing);
   });
 
+  testWidgets('terms and microphone start checked', (tester) async {
+    tester.view.physicalSize = const Size(390, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(theme: hazaraTheme(), home: const HomeScreen()),
+    );
+    await tester.pumpAndSettle();
+
+    final terms = tester.widget<CheckboxListTile>(
+      find.byKey(const ValueKey('terms-checkbox')),
+    );
+    final mic = tester.widget<CheckboxListTile>(
+      find.byKey(const ValueKey('mic-checkbox')),
+    );
+    expect(terms.value, isTrue);
+    expect(mic.value, isTrue);
+    expect(find.text('Allow microphone'), findsOneWidget);
+    expect(find.textContaining('Terms of Use'), findsWidgets);
+  });
+
   testWidgets('create lobby has no join field', (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;

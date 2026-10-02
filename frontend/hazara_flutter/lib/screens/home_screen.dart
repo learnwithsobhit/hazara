@@ -4,8 +4,11 @@ import '../net/api_client.dart';
 import '../net/session_store.dart';
 import '../theme/hazara_theme.dart';
 import '../theme/layout.dart';
+import '../util/legal_consent.dart';
+import '../util/mic_permission.dart';
 import '../widgets/avatar_picker.dart';
 import '../widgets/hero_section.dart';
+import '../widgets/table_consent.dart';
 import 'arrangement_screen.dart';
 import 'lobby_screen.dart';
 import 'rules_book.dart';
@@ -34,6 +37,8 @@ class _HomeScreenState extends State<HomeScreen> {
   int _avatar = 0;
   int _tab = 0; // 0 = Create, 1 = Join
   bool _inviteDismissed = false;
+  bool _legalAccepted = true;
+  bool _allowMic = true;
 
   bool get _invited {
     final code = widget.roomCode;
@@ -50,6 +55,8 @@ class _HomeScreenState extends State<HomeScreen> {
     final saved = await _sessions.loadGuest();
     final matchId = await _sessions.loadMatch();
     final avatar = await _sessions.loadAvatar();
+    final legal = await loadLegalAccepted();
+    final mic = await loadAllowMic();
     if (!mounted) return;
     final invited =
         widget.roomCode != null && widget.roomCode!.isNotEmpty;
@@ -57,6 +64,8 @@ class _HomeScreenState extends State<HomeScreen> {
       _saved = saved;
       _matchId = matchId;
       _avatar = invited ? 0 : avatar;
+      _legalAccepted = legal;
+      _allowMic = mic;
       if (!invited && saved != null && _name.text.isEmpty) {
         _name.text = saved.name;
       }
@@ -136,13 +145,19 @@ class _HomeScreenState extends State<HomeScreen> {
     await _sessions.saveAvatar(chosen);
   }
 
-  void _create() {
+  Future<void> _create() async {
     final name = _name.text.trim();
     if (name.isEmpty || name.length > 16) {
       setState(() => _error = 'Enter a name of 1–16 characters.');
       return;
     }
+    if (!_legalAccepted) {
+      setState(() => _error = 'Please agree to the Terms of Use and Privacy Policy.');
+      return;
+    }
     setState(() => _error = null);
+    if (_allowMic) await requestMicrophonePermission();
+    if (!mounted) return;
     final reuse = _saved != null && _saved!.name == name ? _saved : null;
     Navigator.of(context).push(
       MaterialPageRoute(
@@ -151,7 +166,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  void _join() {
+  Future<void> _join() async {
     final name = _name.text.trim();
     final code = _code.text.trim().toUpperCase();
     if (name.isEmpty || name.length > 16) {
@@ -162,7 +177,13 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() => _error = 'Paste or type the 6-letter room code.');
       return;
     }
+    if (!_legalAccepted) {
+      setState(() => _error = 'Please agree to the Terms of Use and Privacy Policy.');
+      return;
+    }
     setState(() => _error = null);
+    if (_allowMic) await requestMicrophonePermission();
+    if (!mounted) return;
     final reuse = _saved != null && _saved!.name == name ? _saved : null;
     Navigator.of(context).push(
       MaterialPageRoute(
@@ -300,7 +321,20 @@ class _HomeScreenState extends State<HomeScreen> {
                         style: const TextStyle(color: HazaraColors.gold, fontSize: 13),
                       ),
                     ],
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 12),
+                    TableConsent(
+                      legalAccepted: _legalAccepted,
+                      allowMic: _allowMic,
+                      onLegalChanged: (accepted) {
+                        setState(() => _legalAccepted = accepted);
+                        setLegalAccepted(accepted);
+                      },
+                      onMicChanged: (allow) {
+                        setState(() => _allowMic = allow);
+                        setAllowMic(allow);
+                      },
+                    ),
+                    const SizedBox(height: 8),
 
                     if (_invited) ...[
                       FilledButton(
@@ -448,7 +482,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       const SizedBox(height: 6),
                       const Text(
                         'Read this once. The table uses these rules.',
-                        style: const TextStyle(color: HazaraColors.creamMuted),
+                        style: TextStyle(color: HazaraColors.creamMuted),
                       ),
                       const SizedBox(height: 16),
                       const RulesBook(),
