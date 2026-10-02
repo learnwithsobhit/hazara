@@ -32,6 +32,34 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('Back to hand returns a selected card from a set', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(const HazaraApp(preview: true, showCoach: false));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('card-hearts-ace')));
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('set-0')));
+    await tester.pump();
+    expect(find.text('1 of 3'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('card-hearts-ace')));
+    await tester.pump();
+    expect(find.byKey(const ValueKey('back-to-hand')), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('back-to-hand')));
+    await tester.pump();
+    expect(find.text('1 of 3'), findsNothing);
+    expect(find.byKey(const ValueKey('back-to-hand')), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('live arrange hides the table so all four sets stay on screen', (
     tester,
   ) async {

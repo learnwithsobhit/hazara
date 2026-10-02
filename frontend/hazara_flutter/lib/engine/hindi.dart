@@ -121,7 +121,7 @@ String? hindiSetDetail({
 
 String hindiOrderWarning(int inversion) {
   if (inversion == 2) {
-    return 'चौथा सेट तीसरे से मजबूत है। चौथा सेट सबसे कमजोर रहना चाहिए।';
+    return 'चौथा सेट तीसरे से मजबूत है। धुंधली पत्ती को दूसरी सेट की पत्ती से बदलें।';
   }
   final lower = kHindiSetNames[inversion + 1];
   final upper = kHindiSetNames[inversion];

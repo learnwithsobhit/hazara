@@ -89,13 +89,13 @@ class _ArrangementScreenState extends State<ArrangementScreen>
 
   static const _coachLines = [
     'Tap cards, then tap a set.',
-    'Put the strongest set at the top. Swap sets if the order is wrong.',
+    'Tap a card, then tap where it should go. Back to hand frees a slot. Drop on a card to swap.',
     'Ready locks the hand.',
   ];
 
   static const _coachHindi = [
     'पत्ती चुनें, फिर सेट पर टैप करें।',
-    'सबसे मजबूत सेट ऊपर रखें। क्रम गलत हो तो सेट बदलें।',
+    'पत्ती चुनें, फिर जगह पर टैप करें। हाथ में वापस से जगह खाली। पत्ती पर छोड़ें तो बदलें।',
     'रेडी दबाने पर हाथ बंद हो जाता है।',
   ];
 
@@ -249,9 +249,7 @@ class _ArrangementScreenState extends State<ArrangementScreen>
                   final coachH = _coach == null ? 0.0 : 48.0;
                   final hasSeats =
                       widget.seats != null && widget.seats!.isNotEmpty;
-                  final tableH = !hasSeats
-                      ? 96.0
-                      : (_tableOpen ? 176.0 : 58.0);
+                  final tableH = !hasSeats ? 96.0 : (_tableOpen ? 176.0 : 58.0);
                   final trayBudget =
                       (constraints.maxHeight - 46 - 72 - coachH - tableH - 96)
                           .clamp(64.0, 170.0);
@@ -264,11 +262,7 @@ class _ArrangementScreenState extends State<ArrangementScreen>
                       _header(),
                       _score(),
                       if (_coach != null) _coachCard(),
-                      Expanded(
-                        child: _model.editingSet == null
-                            ? _setList()
-                            : _editor(),
-                      ),
+                      Expanded(child: _setList()),
                       _tray(cardW),
                       _dock(reduce),
                     ],
@@ -614,15 +608,29 @@ class _ArrangementScreenState extends State<ArrangementScreen>
 
   Widget _setRow(int index) {
     final cards = _model.sets[index];
-    return DragTarget<PlayingCard>(
-      onWillAcceptWithDetails: (_) => !_busy,
-      onAcceptWithDetails: (details) =>
-          _edit(() => _model.dropCard(details.data, index)),
+    return DragTarget<_DragPayload>(
+      onWillAcceptWithDetails: (details) {
+        if (_busy) return false;
+        final pile = details.data.pile;
+        if (pile != null) return pile != index;
+        final card = details.data.card;
+        return card != null && !_model.sets[index].contains(card);
+      },
+      onAcceptWithDetails: (details) {
+        final pile = details.data.pile;
+        if (pile != null) {
+          _edit(() => _model.swapPiles(pile, index));
+          return;
+        }
+        final card = details.data.card;
+        if (card == null) return;
+        _edit(() => _model.dropCard(card, index));
+      },
       builder: (context, candidate, rejected) {
         final hot = candidate.isNotEmpty;
         return AnimatedContainer(
           duration: const Duration(milliseconds: 180),
-          padding: const EdgeInsets.fromLTRB(10, 6, 4, 6),
+          padding: const EdgeInsets.fromLTRB(10, 6, 10, 6),
           decoration: BoxDecoration(
             color: HazaraColors.feltRaised,
             borderRadius: BorderRadius.circular(12),
@@ -634,64 +642,7 @@ class _ArrangementScreenState extends State<ArrangementScreen>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Semantics(
-                      button: true,
-                      label: '${kSetNames[index]}. ${_model.setStatus(index)}',
-                      excludeSemantics: true,
-                      child: GestureDetector(
-                        key: ValueKey('set-$index'),
-                        behavior: HitTestBehavior.opaque,
-                        onTap: _busy
-                            ? null
-                            : () => _edit(() => _model.activateSet(index)),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Text(
-                                  kSetNames[index],
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                HindiLine(kHindiSetNames[index], size: 12),
-                              ],
-                            ),
-                            Text(
-                              _model.setStatus(index),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                color: HazaraColors.cream,
-                                fontSize: 12,
-                              ),
-                            ),
-                            if (_hindiDetail(index) != null)
-                              HindiLine(_hindiDetail(index)!, size: 11),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  TextButton(
-                    key: ValueKey('edit-$index'),
-                    style: TextButton.styleFrom(
-                      visualDensity: VisualDensity.compact,
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    ),
-                    onPressed: _busy
-                        ? null
-                        : () => setState(() => _model.openEditor(index)),
-                    child: const Text('Edit'),
-                  ),
-                ],
-              ),
+              _setTitle(index),
               if (cards.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(top: 4),
@@ -700,7 +651,7 @@ class _ArrangementScreenState extends State<ArrangementScreen>
                     runSpacing: 4,
                     children: [
                       for (final card in cards)
-                        _draggable(card, 36, dimmed: _isSpare(index, card)),
+                        _cardTarget(card, 36, dimmed: _isSpare(index, card)),
                     ],
                   ),
                 ),
@@ -708,6 +659,74 @@ class _ArrangementScreenState extends State<ArrangementScreen>
           ),
         );
       },
+    );
+  }
+
+  Widget _setTitle(int index) {
+    final title = Semantics(
+      button: true,
+      label: '${kSetNames[index]}. ${_model.setStatus(index)}',
+      excludeSemantics: true,
+      child: GestureDetector(
+        key: ValueKey('set-$index'),
+        behavior: HitTestBehavior.opaque,
+        onTap: _busy ? null : () => _edit(() => _model.activateSet(index)),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text(
+                  kSetNames[index],
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                HindiLine(kHindiSetNames[index], size: 12),
+              ],
+            ),
+            Text(
+              _model.setStatus(index),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: HazaraColors.cream, fontSize: 12),
+            ),
+            if (_hindiDetail(index) != null)
+              HindiLine(_hindiDetail(index)!, size: 11),
+          ],
+        ),
+      ),
+    );
+    if (_busy || index > 2) {
+      return SizedBox(width: double.infinity, child: title);
+    }
+    return SizedBox(
+      width: double.infinity,
+      child: Draggable<_DragPayload>(
+        data: _DragPayload.pile(index),
+        feedback: Material(
+          color: Colors.transparent,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: HazaraColors.feltRaised,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: HazaraColors.gold),
+            ),
+            child: Text(
+              kSetNames[index],
+              style: const TextStyle(
+                color: HazaraColors.cream,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ),
+        childWhenDragging: Opacity(opacity: 0.35, child: title),
+        child: title,
+      ),
     );
   }
 
@@ -726,179 +745,145 @@ class _ArrangementScreenState extends State<ArrangementScreen>
     return combo?.spare == card;
   }
 
-  Widget _editor({bool scroll = true}) {
-    final index = _model.editingSet!;
-    final cards = _model.sets[index];
-    final combo = evaluateSet(cards);
-    final body = Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      kSetNames[index],
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    HindiLine(kHindiSetNames[index], size: 13),
-                  ],
-                ),
-              ),
-              TextButton(
-                key: const ValueKey('close-editor'),
-                onPressed: () => setState(() => _model.closeEditor()),
-                child: const Text('Sets'),
-              ),
-            ],
-          ),
-          Text(
-            cards.length < 3 ? _model.setStatus(index) : combo?.label ?? '',
-            style: const TextStyle(fontSize: 15),
-          ),
-          if (_hindiDetail(index) != null) HindiLine(_hindiDetail(index)!),
-          const SizedBox(height: 10),
-          if (combo?.spare != null) ...[
-            const Text(
-              'Counts for rank',
-              style: TextStyle(color: HazaraColors.gold, fontSize: 12),
-            ),
-            const HindiLine(kHindiCountsForRank, size: 12),
-            const SizedBox(height: 6),
-          ],
-          _editorCards(index, cards, combo),
-          if (combo?.spare != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
-                  Text(
-                    'Spare — counts for points if you win this set',
-                    style: TextStyle(
-                      color: HazaraColors.creamMuted,
-                      fontSize: 12,
-                    ),
-                  ),
-                  HindiLine(kHindiSparePoints, size: 12),
-                ],
-              ),
-            ),
-        ],
-      ),
-    );
-    if (!scroll) return body;
-    return ListView(children: [body]);
-  }
-
-  Widget _editorCards(int index, List<PlayingCard> cards, Combo? combo) {
-    final counting = cards.where((card) => combo?.spare != card).toList();
-    final spare = combo?.spare;
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final width = ((constraints.maxWidth - 24) / 4).clamp(64.0, 92.0);
-        return Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          crossAxisAlignment: WrapCrossAlignment.end,
-          children: [
-            if (spare != null)
-              DecoratedBox(
-                decoration: BoxDecoration(
-                  border: Border.all(color: HazaraColors.gold, width: 1.5),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(6),
-                  child: Wrap(
-                    spacing: 6,
-                    children: [
-                      for (final card in counting) _editorCard(card, width),
-                    ],
-                  ),
-                ),
-              ),
-            if (spare == null)
-              for (final card in cards) _editorCard(card, width),
-            if (spare != null) _editorCard(spare, width, dimmed: true),
-          ],
+  Widget _cardTarget(PlayingCard card, double width, {bool dimmed = false}) {
+    return DragTarget<_DragPayload>(
+      onWillAcceptWithDetails: (details) {
+        final moving = details.data.card;
+        return !_busy && moving != null && moving != card;
+      },
+      onAcceptWithDetails: (details) {
+        final moving = details.data.card;
+        if (moving == null) return;
+        _edit(() => _model.swapCards(moving, card));
+      },
+      builder: (context, candidate, rejected) {
+        return _draggable(
+          card,
+          width,
+          dimmed: dimmed,
+          hot: candidate.isNotEmpty,
         );
       },
     );
   }
 
-  Widget _editorCard(PlayingCard card, double width, {bool dimmed = false}) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        _draggable(card, width, dimmed: dimmed),
-        TextButton(
-          key: ValueKey('remove-${card.id}'),
-          onPressed: _busy ? null : () => _edit(() => _model.moveToTray(card)),
-          child: const Text('Tray'),
-        ),
-      ],
-    );
-  }
-
   Widget _tray(double cardW) {
     final cards = _model.tray;
-    return Container(
-      width: double.infinity,
-      color: HazaraColors.feltDeep,
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 6),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            cards.isEmpty ? 'All 13 cards are in sets' : 'Your cards',
-            style: const TextStyle(
-              color: HazaraColors.creamMuted,
-              fontSize: 12,
+    final canReturn = _model.canReturnSelection;
+    return DragTarget<_DragPayload>(
+      onWillAcceptWithDetails: (details) {
+        final card = details.data.card;
+        return !_busy && card != null && !_model.tray.contains(card);
+      },
+      onAcceptWithDetails: (details) {
+        final card = details.data.card;
+        if (card == null) return;
+        _edit(() => _model.moveToTray(card));
+      },
+      builder: (context, candidate, rejected) {
+        final hot = candidate.isNotEmpty;
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: HazaraColors.feltDeep,
+            border: Border(
+              top: BorderSide(
+                color: hot ? HazaraColors.gold : Colors.transparent,
+                width: 2,
+              ),
             ),
           ),
-          const SizedBox(height: 6),
-          if (cards.isNotEmpty)
-            Wrap(
-              spacing: 4,
-              runSpacing: 4,
-              children: [for (final card in cards) _draggable(card, cardW)],
-            ),
-        ],
-      ),
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 6),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: _busy || !canReturn
+                          ? null
+                          : () => _edit(_model.returnSelectedToTray),
+                      child: Text(
+                        cards.isEmpty
+                            ? 'All 13 cards are in sets'
+                            : 'Your cards',
+                        style: const TextStyle(
+                          color: HazaraColors.creamMuted,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ),
+                  if (canReturn)
+                    TextButton(
+                      key: const ValueKey('back-to-hand'),
+                      style: TextButton.styleFrom(
+                        visualDensity: VisualDensity.compact,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        foregroundColor: HazaraColors.gold,
+                      ),
+                      onPressed: _busy
+                          ? null
+                          : () => _edit(_model.returnSelectedToTray),
+                      child: const Text('Back to hand'),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              if (cards.isNotEmpty)
+                Wrap(
+                  spacing: 4,
+                  runSpacing: 4,
+                  children: [
+                    for (final card in cards) _cardTarget(card, cardW),
+                  ],
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 
-  Widget _draggable(PlayingCard card, double width, {bool dimmed = false}) {
+  Widget _draggable(
+    PlayingCard card,
+    double width, {
+    bool dimmed = false,
+    bool hot = false,
+  }) {
     final face = CardFace(
       card: card,
       width: width,
       selected: _model.selected.contains(card),
       dimmed: dimmed,
       cardKey: ValueKey('card-${card.id}'),
-      onTap: _busy ? null : () => _edit(() => _model.toggle(card)),
+      onTap: _busy ? null : () => _edit(() => _model.tapCard(card)),
     );
-    if (_busy) return RepaintBoundary(child: face);
+    final shown = hot
+        ? DecoratedBox(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: HazaraColors.gold, width: 2),
+            ),
+            child: face,
+          )
+        : face;
+    if (_busy) return RepaintBoundary(child: shown);
     return RepaintBoundary(
-      child: LongPressDraggable<PlayingCard>(
-        data: card,
-        delay: const Duration(milliseconds: 160),
+      child: Draggable<_DragPayload>(
+        data: _DragPayload.card(card),
         feedback: Material(
           color: Colors.transparent,
           child: CardFace(card: card, width: width, selected: true),
         ),
         childWhenDragging: Opacity(
           opacity: 0.35,
-          child: IgnorePointer(child: face),
+          child: IgnorePointer(child: shown),
         ),
-        child: face,
+        child: shown,
       ),
     );
   }
@@ -1032,11 +1017,7 @@ class _ArrangementScreenState extends State<ArrangementScreen>
 }
 
 class _WarningBanner extends StatelessWidget {
-  const _WarningBanner({
-    required this.text,
-    required this.onSwap,
-    this.hindi,
-  });
+  const _WarningBanner({required this.text, required this.onSwap, this.hindi});
 
   final String text;
   final String? hindi;
@@ -1081,4 +1062,12 @@ class _WarningBanner extends StatelessWidget {
       ),
     );
   }
+}
+
+class _DragPayload {
+  const _DragPayload.card(this.card) : pile = null;
+  const _DragPayload.pile(this.pile) : card = null;
+
+  final PlayingCard? card;
+  final int? pile;
 }

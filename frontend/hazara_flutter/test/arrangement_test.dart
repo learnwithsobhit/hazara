@@ -90,9 +90,71 @@ void main() {
       ], 2);
       put(model, [...troy, c(Suit.spades, Rank.two)], 3);
       expect(model.orderWarning, contains('Spare is stronger'));
+      expect(model.orderWarning, contains('dimmed card'));
       final before = List<PlayingCard>.of(model.sets[3]);
       model.swapFirstInversion();
       expect(model.sets[3], before);
+      final third = List<PlayingCard>.of(model.sets[2]);
+      model.swapPiles(2, 3);
+      expect(model.sets[2], third);
+      expect(model.sets[3], before);
+      expect(model.lastError, contains('spare set stays last'));
     },
   );
+
+  test('a card leaves a full set for a set that has room', () {
+    final model = ArrangementModel();
+    put(model, troy, 0);
+    put(model, [colourRun.first], 1);
+    model.toggle(troy.first);
+    model.activateSet(1);
+    expect(model.sets[0], isNot(contains(troy.first)));
+    expect(model.sets[1], contains(troy.first));
+    expect(model.sets[1].length, 2);
+    expect(model.lastError, isNull);
+  });
+
+  test('two cards swap between full sets', () {
+    final model = ArrangementModel();
+    put(model, troy, 0);
+    put(model, colourRun, 1);
+    model.tapCard(troy.first);
+    model.tapCard(colourRun.first);
+    expect(model.sets[0], contains(colourRun.first));
+    expect(model.sets[0], isNot(contains(troy.first)));
+    expect(model.sets[1], contains(troy.first));
+    expect(model.sets[0].length, 3);
+    expect(model.sets[1].length, 3);
+    expect(model.selected, isEmpty);
+  });
+
+  test('a selected card returns to the backlog and frees the slot', () {
+    final model = ArrangementModel();
+    put(model, troy, 0);
+    final incoming = c(Suit.spades, Rank.king);
+    final backlog = model.tray.first;
+    model.toggle(troy.first);
+    model.toggle(backlog);
+    expect(model.canReturnSelection, isTrue);
+    model.returnSelectedToTray();
+    expect(model.sets[0].length, 2);
+    expect(model.sets[0], isNot(contains(troy.first)));
+    expect(model.tray, contains(troy.first));
+    expect(model.tray, contains(backlog));
+    expect(model.canReturnSelection, isFalse);
+    model.toggle(incoming);
+    model.activateSet(0);
+    expect(model.sets[0], contains(incoming));
+    expect(model.sets[0].length, 3);
+    expect(model.lastError, isNull);
+  });
+
+  test('two three-card piles trade places', () {
+    final model = ArrangementModel();
+    put(model, run, 0);
+    put(model, troy, 1);
+    model.swapPiles(0, 1);
+    expect(model.sets[0], troy);
+    expect(model.sets[1], run);
+  });
 }

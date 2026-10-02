@@ -23,14 +23,12 @@ class ArrangementModel {
 
   bool locked = false;
   String? lastError;
-  int? editingSet;
 
   void reset([List<PlayingCard>? hand]) {
     _history.clear();
     selected.clear();
     locked = false;
     lastError = null;
-    editingSet = null;
     for (final set in sets) {
       set.clear();
     }
@@ -65,7 +63,6 @@ class ArrangementModel {
     }
     selected.clear();
     _history.clear();
-    editingSet = null;
     lastError = null;
     locked = true;
   }
@@ -89,25 +86,49 @@ class ArrangementModel {
     lastError = null;
   }
 
-  /// Assigns the current selection, or opens the editor when nothing is selected.
+  /// Moves the current selection into [index] when the set has room.
   void activateSet(int index) {
     if (!_editsOpen()) return;
     if (selected.isEmpty) {
-      editingSet = index;
       lastError = null;
       return;
     }
     _assign(index);
   }
 
-  void openEditor(int index) {
+  /// Selects a card, or swaps it with the one card already selected
+  /// when the two cards sit in different places.
+  void tapCard(PlayingCard card) {
     if (!_editsOpen()) return;
-    editingSet = index;
     lastError = null;
+    if (selected.contains(card)) {
+      selected.remove(card);
+      return;
+    }
+    if (selected.length == 1 && _home(selected.first) != _home(card)) {
+      swapCards(selected.first, card);
+      return;
+    }
+    selected.add(card);
   }
 
-  void closeEditor() {
-    editingSet = null;
+  bool get canReturnSelection =>
+      !locked && selected.any((card) => _home(card) >= 0);
+
+  /// Pulls selected cards out of their sets and into the backlog.
+  void returnSelectedToTray() {
+    if (!_editsOpen()) return;
+    final moving = selected.where((card) => _home(card) >= 0).toList();
+    if (moving.isEmpty) return;
+    _push();
+    for (final card in moving) {
+      for (final set in sets) {
+        set.remove(card);
+      }
+      if (!tray.contains(card)) tray.add(card);
+    }
+    selected.clear();
+    lastError = null;
   }
 
   void moveToTray(PlayingCard card) {
@@ -164,6 +185,51 @@ class ArrangementModel {
     lastError = null;
   }
 
+  /// Trades two of the three-card piles. The spare slot cannot move.
+  void swapPiles(int from, int to) {
+    if (!_editsOpen()) return;
+    if (from == to || from < 0 || to < 0 || from > 3 || to > 3) return;
+    if (from > 2 || to > 2) {
+      lastError = 'The spare set stays last. Move a card instead.';
+      return;
+    }
+    _push();
+    final left = List<PlayingCard>.of(sets[from]);
+    final right = List<PlayingCard>.of(sets[to]);
+    sets[from]
+      ..clear()
+      ..addAll(right);
+    sets[to]
+      ..clear()
+      ..addAll(left);
+    lastError = null;
+  }
+
+  /// Trades the places of two cards, including a card in a full set.
+  void swapCards(PlayingCard a, PlayingCard b) {
+    if (!_editsOpen() || a == b) return;
+    final homeA = _home(a);
+    final homeB = _home(b);
+    if (homeA < -1 || homeB < -1) return;
+    if (homeA == homeB) {
+      final list = homeA == -1 ? tray : sets[homeA];
+      final indexA = list.indexOf(a);
+      final indexB = list.indexOf(b);
+      if (indexA < 0 || indexB < 0 || indexA == indexB) return;
+      _push();
+      list[indexA] = b;
+      list[indexB] = a;
+      selected.clear();
+      lastError = null;
+      return;
+    }
+    _push();
+    _replace(homeA, a, b);
+    _replace(homeB, b, a);
+    selected.clear();
+    lastError = null;
+  }
+
   void swapFirstInversion() {
     final index = firstInversion;
     if (index == null || index == 2 || !_editsOpen()) return;
@@ -201,7 +267,7 @@ class ArrangementModel {
     final inversion = firstInversion;
     if (inversion == null) return null;
     if (inversion == 2) {
-      return 'Spare is stronger than Third. The spare set has to stay the weakest.';
+      return 'Spare is stronger than Third. Trade the dimmed card with a card in another set.';
     }
     return '${kSetNames[inversion + 1]} is stronger than ${kSetNames[inversion]}. Swap them to continue.';
   }
@@ -217,7 +283,6 @@ class ArrangementModel {
     if (!isLegal || locked) return;
     locked = true;
     selected.clear();
-    editingSet = null;
     lastError = null;
   }
 
@@ -247,7 +312,7 @@ class ArrangementModel {
         .where((card) => !sets[index].contains(card))
         .toList();
     if (moving.isEmpty) {
-      editingSet = index;
+      lastError = null;
       return;
     }
     if (sets[index].length + moving.length > kSetSizes[index]) {
@@ -264,6 +329,22 @@ class ArrangementModel {
     }
     selected.clear();
     lastError = null;
+  }
+
+  /// -1 is the backlog. 0–3 is a set. -2 means the card is not in this hand.
+  int _home(PlayingCard card) {
+    for (var i = 0; i < sets.length; i++) {
+      if (sets[i].contains(card)) return i;
+    }
+    if (tray.contains(card)) return -1;
+    return -2;
+  }
+
+  void _replace(int home, PlayingCard from, PlayingCard to) {
+    final list = home == -1 ? tray : sets[home];
+    final index = list.indexOf(from);
+    if (index < 0) return;
+    list[index] = to;
   }
 
   void _push() {
