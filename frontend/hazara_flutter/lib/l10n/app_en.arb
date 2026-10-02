@@ -1,0 +1,187 @@
+{
+  "@@locale": "en",
+  "appTitle": "HAZARA",
+  "@appTitle": {
+    "description": "The application title."
+  },
+  "tagline": "Four people. One table. Room code.",
+  "@tagline": {
+    "description": "Short tagline shown on the home screen."
+  },
+  "subTagline": "Pagat Hazari · Bangladesh rules",
+  "@subTagline": {
+    "description": "Game rules attribution on home screen."
+  },
+  "howToPlay": "How to play",
+  "@howToPlay": {
+    "description": "Button and section header for the rulebook."
+  },
+  "yourName": "Your name",
+  "@yourName": {
+    "description": "Label for the player name text field."
+  },
+  "createTable": "Create table",
+  "@createTable": {
+    "description": "Segmented control tab to create a new table."
+  },
+  "joinTable": "Join table",
+  "@joinTable": {
+    "description": "Segmented control tab to join an existing table."
+  },
+  "createAndInvite": "Create & invite",
+  "@createAndInvite": {
+    "description": "Primary CTA button on the Create tab."
+  },
+  "roomCode": "Room code",
+  "@roomCode": {
+    "description": "Label for the room code input."
+  },
+  "playWithFriends": "Play with friends",
+  "@playWithFriends": {
+    "description": "Generic CTA for starting a friends game."
+  },
+  "playOnlineSoon": "Play online · Soon",
+  "@playOnlineSoon": {
+    "description": "Disabled online play button label."
+  },
+  "tryCards": "Try the cards on this device",
+  "@tryCards": {
+    "description": "Solo arrangement practice button."
+  },
+  "returnToTable": "Return to your table",
+  "@returnToTable": {
+    "description": "Button shown when the player has an active match."
+  },
+  "matchLength": "Match length",
+  "@matchLength": {
+    "description": "Label for the match length selector."
+  },
+  "oneDeal": "One deal",
+  "@oneDeal": {
+    "description": "One deal match length option."
+  },
+  "shortMatch": "Short · 3 deals",
+  "@shortMatch": {
+    "description": "Short match length option."
+  },
+  "fullMatch": "Full · first to 1000 · about 30–50 min",
+  "@fullMatch": {
+    "description": "Full match length option."
+  },
+  "needMorePlayers": "Need {n} more {n, plural, one{player} other{players}}",
+  "@needMorePlayers": {
+    "description": "Lobby label when not enough players have joined.",
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "seatedCount": "{filled} of 4 seated",
+  "@seatedCount": {
+    "description": "Player count in the lobby waiting room.",
+    "placeholders": {
+      "filled": {
+        "type": "int"
+      }
+    }
+  },
+  "shareCode": "Share this code",
+  "@shareCode": {
+    "description": "Instruction above the large room code in the lobby."
+  },
+  "copyCode": "Copy",
+  "@copyCode": {
+    "description": "Copy room code button."
+  },
+  "shareInvite": "Share",
+  "@shareInvite": {
+    "description": "Share invite link button."
+  },
+  "start": "Start",
+  "@start": {
+    "description": "Host start match button."
+  },
+  "waitingForHost": "Waiting for the host.",
+  "@waitingForHost": {
+    "description": "Message shown to non-host players waiting for the match to start."
+  },
+  "leaveTableTitle": "Leave the table?",
+  "@leaveTableTitle": {
+    "description": "Confirm dialog title when pressing back on the table screen."
+  },
+  "leaveTableBody": "Your hand stays locked on the server. You can rejoin with the same code.",
+  "@leaveTableBody": {
+    "description": "Confirm dialog body when leaving the table."
+  },
+  "stay": "Stay",
+  "@stay": {
+    "description": "Cancel button in the leave confirm dialog."
+  },
+  "leave": "Leave",
+  "@leave": {
+    "description": "Confirm leave button."
+  },
+  "reconnecting": "Reconnecting… your hand is safe.",
+  "@reconnecting": {
+    "description": "Reconnect banner message."
+  },
+  "tryAgain": "Try again",
+  "@tryAgain": {
+    "description": "Retry reconnection button."
+  },
+  "awayPlayers": "{names} {count, plural, one{is} other{are}} away",
+  "@awayPlayers": {
+    "description": "Away presence bar message.",
+    "placeholders": {
+      "names": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "nextDeal": "Next deal",
+  "@nextDeal": {
+    "description": "Host button to advance to the next deal."
+  },
+  "endMatchEarly": "End match early",
+  "@endMatchEarly": {
+    "description": "Host button to force-end a match before the natural conclusion."
+  },
+  "playAgain": "Play again",
+  "@playAgain": {
+    "description": "Rematch button shown on the victory screen."
+  },
+  "home": "Home",
+  "@home": {
+    "description": "Home navigation button."
+  },
+  "matchFinished": "Match finished",
+  "@matchFinished": {
+    "description": "Header on the victory/summary screen when the match ends."
+  },
+  "winsExclamation": "{name} wins!",
+  "@winsExclamation": {
+    "description": "Winner announcement on the victory screen.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "versionLabel": "v{version}",
+  "@versionLabel": {
+    "description": "Version string in the footer.",
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "legalFooter": "Card images: CC0. No account required.",
+  "@legalFooter": {
+    "description": "Legal footer on the home screen."
+  }
+}

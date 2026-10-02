@@ -1,0 +1,14 @@
+/Users/shobhit/MyDevelopment/new_prject/hazara/backend/target/debug/deps/serde-22345358ba0ab0ad.d: /Users/shobhit/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.229/src/lib.rs /Users/shobhit/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.229/src/integer128.rs /Users/shobhit/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.229/src/private/mod.rs /Users/shobhit/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.229/src/private/de.rs /Users/shobhit/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.229/src/private/ser.rs /Users/shobhit/MyDevelopment/new_prject/hazara/backend/target/debug/build/serde-cc1cc219a3ceb891/out/private.rs
+
+/Users/shobhit/MyDevelopment/new_prject/hazara/backend/target/debug/deps/libserde-22345358ba0ab0ad.rlib: /Users/shobhit/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.229/src/lib.rs /Users/shobhit/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.229/src/integer128.rs /Users/shobhit/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.229/src/private/mod.rs /Users/shobhit/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.229/src/private/de.rs /Users/shobhit/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.229/src/private/ser.rs /Users/shobhit/MyDevelopment/new_prject/hazara/backend/target/debug/build/serde-cc1cc219a3ceb891/out/private.rs
+
+/Users/shobhit/MyDevelopment/new_prject/hazara/backend/target/debug/deps/libserde-22345358ba0ab0ad.rmeta: /Users/shobhit/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.229/src/lib.rs /Users/shobhit/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.229/src/integer128.rs /Users/shobhit/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.229/src/private/mod.rs /Users/shobhit/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.229/src/private/de.rs /Users/shobhit/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.229/src/private/ser.rs /Users/shobhit/MyDevelopment/new_prject/hazara/backend/target/debug/build/serde-cc1cc219a3ceb891/out/private.rs
+
+/Users/shobhit/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.229/src/lib.rs:
+/Users/shobhit/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.229/src/integer128.rs:
+/Users/shobhit/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.229/src/private/mod.rs:
+/Users/shobhit/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.229/src/private/de.rs:
+/Users/shobhit/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.229/src/private/ser.rs:
+/Users/shobhit/MyDevelopment/new_prject/hazara/backend/target/debug/build/serde-cc1cc219a3ceb891/out/private.rs:
+
+# env-dep:OUT_DIR=/Users/shobhit/MyDevelopment/new_prject/hazara/backend/target/debug/build/serde-cc1cc219a3ceb891/out

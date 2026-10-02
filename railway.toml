@@ -1,0 +1,6 @@
+# Not deployed. One replica until a match has an ownership epoch.
+# Start the API locally with `cargo run -p hazara-server` from backend/.
+
+[deploy]
+numReplicas = 1
+restartPolicyType = "ON_FAILURE"
