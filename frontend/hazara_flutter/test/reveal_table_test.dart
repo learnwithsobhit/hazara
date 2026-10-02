@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hazara_flutter/model/playing_card.dart';
 import 'package:hazara_flutter/net/snapshot.dart';
 import 'package:hazara_flutter/theme/hazara_theme.dart';
+import 'package:hazara_flutter/widgets/card_back.dart';
 import 'package:hazara_flutter/widgets/felt_table.dart';
 import 'package:hazara_flutter/widgets/reveal_table.dart';
 
@@ -64,15 +65,12 @@ TableSnapshot _revealSnap() {
 }
 
 Widget _wrap(Widget child) => MaterialApp(
-      theme: hazaraTheme(),
-      home: MediaQuery(
-        data: const MediaQueryData(
-          size: Size(390, 844),
-          disableAnimations: true,
-        ),
-        child: child,
-      ),
-    );
+  theme: hazaraTheme(),
+  home: MediaQuery(
+    data: const MediaQueryData(size: Size(390, 844), disableAnimations: true),
+    child: child,
+  ),
+);
 
 void main() {
   testWidgets('PlayTable seats sit on the oval with names', (tester) async {
@@ -112,6 +110,9 @@ void main() {
     expect(find.textContaining('Strongest'), findsWidgets);
     expect(find.textContaining('takes this set'), findsOneWidget);
     expect(find.textContaining('Ada captures 90'), findsOneWidget);
+    expect(find.textContaining('10 + 10 + 10 = 30'), findsOneWidget);
+    expect(find.textContaining('This deal so far'), findsOneWidget);
+    expect(find.byType(CardBackStack), findsNothing);
     expect(tester.takeException(), isNull);
   });
 }

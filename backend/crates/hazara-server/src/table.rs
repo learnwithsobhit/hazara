@@ -382,8 +382,7 @@ impl Table {
             Phase::Arranging => Vec::new(),
             Phase::Reveal => all
                 .into_iter()
-                .skip(self.reveal_index as usize)
-                .take(1)
+                .take(self.reveal_index as usize + 1)
                 .collect(),
             Phase::Summary => all,
         };
@@ -725,10 +724,11 @@ impl Table {
 }
 
 fn dwell_ms(index: u8) -> u64 {
+    // Long enough for four people to add the card points before the next set.
     if index >= 3 {
-        6_000
+        16_000
     } else {
-        4_500
+        12_000
     }
 }
 
@@ -892,7 +892,10 @@ mod tests {
         assert_eq!(table.phase, Phase::Reveal);
         assert_eq!(table.snapshot(0).beats.len(), 1);
         assert_eq!(table.totals.iter().sum::<u16>(), 360);
-        for _ in 0..4 {
+        let gen = table.reveal_gen();
+        table.advance_reveal(gen);
+        assert_eq!(table.snapshot(0).beats.len(), 2);
+        for _ in 0..3 {
             let gen = table.reveal_gen();
             table.advance_reveal(gen);
         }

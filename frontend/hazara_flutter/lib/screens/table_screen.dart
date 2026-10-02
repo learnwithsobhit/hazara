@@ -15,6 +15,7 @@ import '../widgets/card_face.dart';
 import '../widgets/felt_table.dart';
 import '../widgets/hindi_line.dart';
 import '../widgets/reveal_table.dart';
+import '../widgets/score_tally.dart';
 import '../widgets/table_talk.dart';
 import '../widgets/talk_blast.dart';
 import '../net/snapshot.dart';
@@ -328,8 +329,7 @@ class _TableScreenState extends State<TableScreen> {
     if (snap.protocol != 1) {
       return const _UpdateScreen();
     }
-    void onHome() =>
-        Navigator.of(context).popUntil((route) => route.isFirst);
+    void onHome() => Navigator.of(context).popUntil((route) => route.isFirst);
     final page = snap.revealing
         ? _Reveal(snap: snap, clockOffsetMs: _clockOffsetMs)
         : snap.matchOver
@@ -349,7 +349,6 @@ class _TableScreenState extends State<TableScreen> {
             onHome: onHome,
           )
         : ArrangementScreen(
-
             key: ValueKey('deal-${snap.dealNo}'),
             showCoach: snap.dealNo == 1,
             hand: snap.hand,
@@ -371,10 +370,12 @@ class _TableScreenState extends State<TableScreen> {
             },
           );
     final inner = _reconnecting
-        ? Stack(children: [
-            page,
-            _ReconnectBanner(onRetry: _retryNow),
-          ])
+        ? Stack(
+            children: [
+              page,
+              _ReconnectBanner(onRetry: _retryNow),
+            ],
+          )
         : page;
     return PopScope(
       canPop: false,
@@ -397,10 +398,7 @@ class _TableScreenState extends State<TableScreen> {
     return Column(
       children: [
         Expanded(
-          child: TalkBlastOverlay(
-            bursts: _blastBursts,
-            child: page,
-          ),
+          child: TalkBlastOverlay(bursts: _blastBursts, child: page),
         ),
         if (awayNames.isNotEmpty)
           _AwayBar(
@@ -448,13 +446,15 @@ class _TableScreenState extends State<TableScreen> {
     if (!isTerminal || snap.beats.isEmpty) return;
     if (snap.dealNo <= _lastRecordedDeal) return;
     final scoresBefore = List<int>.from(_scoresBeforeDeal);
-    _dealHistory.add(DealRecord(
-      dealNo: snap.dealNo,
-      playerNames: [for (final s in snap.seats) s.name],
-      scoresBefore: scoresBefore,
-      scoresAfter: List<int>.from(snap.scores),
-      beats: snap.beats,
-    ));
+    _dealHistory.add(
+      DealRecord(
+        dealNo: snap.dealNo,
+        playerNames: [for (final s in snap.seats) s.name],
+        scoresBefore: scoresBefore,
+        scoresAfter: List<int>.from(snap.scores),
+        beats: snap.beats,
+      ),
+    );
     _lastRecordedDeal = snap.dealNo;
     // Update scoresBefore for the NEXT deal
     _scoresBeforeDeal = List<int>.from(snap.scores);
@@ -465,7 +465,8 @@ class _TableScreenState extends State<TableScreen> {
     if (_reconnecting && snap.locked) return "You're still locked in.";
     if (!snap.locked) return _reconnecting ? null : _error;
     // Check if the host is away — warn other players.
-    final hostAway = !snap.youAreHost &&
+    final hostAway =
+        !snap.youAreHost &&
         snap.seats.isNotEmpty &&
         snap.seats.first.status == 'reconnecting';
     if (hostAway) return 'Host is away. The deal continues when they return.';
@@ -487,13 +488,13 @@ class _TableScreenState extends State<TableScreen> {
         () {
           final index = (snap.you + step) % snap.seats.length;
           final seat = snap.seats[index];
-          final locked = seat.status == 'ready' ||
+          final locked =
+              seat.status == 'ready' ||
               seat.status == 'auto' ||
               seat.status == 'locked';
           return SeatChip(
             name: step == 0 ? 'You' : seat.name,
-            detail:
-                '${snap.scores[index]} · ${statusWord(seat.status)}',
+            detail: '${snap.scores[index]} · ${statusWord(seat.status)}',
             you: step == 0,
             remainingSets: locked ? 4 : 0,
             reconnecting: seat.status == 'reconnecting',
@@ -601,18 +602,7 @@ class _Summary extends StatelessWidget {
                         for (var i = 0; i < snap.beats.length; i++)
                           _beat(i, snap.beats[i]),
                         const SizedBox(height: 8),
-                        if (snap.beats.fold<int>(
-                              0,
-                              (sum, beat) => sum + beat.points,
-                            ) ==
-                            360)
-                          const Padding(
-                            padding: EdgeInsets.only(bottom: 8),
-                            child: Text(
-                              'This deal is 360 points.',
-                              style: TextStyle(color: HazaraColors.creamMuted),
-                            ),
-                          ),
+                        DealLedger(snap: snap),
                         if (!snap.matchOver)
                           Padding(
                             padding: const EdgeInsets.only(bottom: 8),
@@ -621,13 +611,6 @@ class _Summary extends StatelessWidget {
                               style: const TextStyle(
                                 color: HazaraColors.creamMuted,
                               ),
-                            ),
-                          ),
-                        for (final chip in _scoreChips(snap))
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 6),
-                            child: Text(
-                              '${chip.$1}  ${chip.$2}    +${chip.$3} this deal',
                             ),
                           ),
                         if (snap.note != null)
@@ -700,7 +683,9 @@ class _Summary extends StatelessWidget {
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: HazaraColors.creamMuted,
                                 minimumSize: const Size.fromHeight(44),
-                                side: const BorderSide(color: HazaraColors.line),
+                                side: const BorderSide(
+                                  color: HazaraColors.line,
+                                ),
                               ),
                               onPressed: onForceEnd,
                               child: const Text('End match early'),
@@ -764,7 +749,9 @@ class _Summary extends StatelessWidget {
               Text(
                 beat.tied ? '${beat.points} (tied)' : '+${beat.points}',
                 style: TextStyle(
-                  color: beat.tied ? HazaraColors.creamMuted : HazaraColors.gold,
+                  color: beat.tied
+                      ? HazaraColors.creamMuted
+                      : HazaraColors.gold,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -785,10 +772,20 @@ class _Summary extends StatelessWidget {
               'Same hand. The later player takes this set.',
               style: TextStyle(color: HazaraColors.gold, fontSize: 13),
             ),
+          if (_equation(beat) != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              _equation(beat)!,
+              style: const TextStyle(
+                color: HazaraColors.gold,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ],
           const SizedBox(height: 6),
           for (final row in beat.rows) ...[
             Text(
-              '${row.name} · ${row.label}',
+              '${row.name} · ${row.label} · ${pointRun(row.cards)} = ${handPoints(row.cards)}',
               style: TextStyle(
                 fontWeight: row.name == beat.winner
                     ? FontWeight.w700
@@ -811,17 +808,39 @@ class _Summary extends StatelessWidget {
     );
   }
 
+  String? _equation(BeatView beat) {
+    final hands = [for (final row in beat.rows) handPoints(row.cards)];
+    final visible = hands.fold(0, (sum, points) => sum + points);
+    if (hands.isEmpty || visible != beat.points) return null;
+    return '${hands.join(' + ')} = ${beat.points}';
+  }
+
   Widget _faces(BeatRow row, {bool glowWinner = false}) {
     return Wrap(
       spacing: 4,
       runSpacing: 4,
       children: [
         for (final card in row.cards)
-          CardFace(
-            card: card,
-            width: 42,
-            selected: glowWinner && row.spareId != card.id,
-            dimmed: row.spareId == card.id,
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CardFace(
+                card: card,
+                width: 42,
+                selected: glowWinner && row.spareId != card.id,
+                dimmed: row.spareId == card.id,
+              ),
+              Text(
+                '${card.points}',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  color: card.points == 10
+                      ? HazaraColors.gold
+                      : HazaraColors.creamMuted,
+                ),
+              ),
+            ],
           ),
       ],
     );
@@ -842,25 +861,6 @@ String _seatName(TableSnapshot snap, int seat) {
     if (person.seat == seat) return person.name;
   }
   return 'Seat ${seat + 1}';
-}
-
-List<(String, String, int)> _scoreChips(TableSnapshot snap) {
-  return [
-    for (var step = 0; step < snap.seats.length; step++)
-      () {
-        final index = (snap.you + step) % snap.seats.length;
-        final name = snap.seats[index].name;
-        var deal = 0;
-        for (final beat in snap.beats) {
-          if (beat.winner == name) deal += beat.points;
-        }
-        return (
-          step == 0 ? 'You' : name,
-          '${index < snap.scores.length ? snap.scores[index] : 0}',
-          deal,
-        );
-      }(),
-  ];
 }
 
 class _TalkLine {

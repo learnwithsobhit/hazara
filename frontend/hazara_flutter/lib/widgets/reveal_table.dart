@@ -7,25 +7,23 @@ import '../engine/hindi.dart';
 import '../net/snapshot.dart';
 import '../theme/hazara_theme.dart';
 import '../theme/layout.dart';
+import 'avatar_picker.dart';
 import 'felt_table.dart';
 import 'flip_card.dart';
 import 'hindi_line.dart';
+import 'score_tally.dart';
 
 const kRevealSetNames = ['Strongest', 'Second', 'Third', 'Spare'];
 
 class RevealTable extends StatelessWidget {
-  const RevealTable({
-    super.key,
-    required this.snap,
-    required this.clockLabel,
-  });
+  const RevealTable({super.key, required this.snap, required this.clockLabel});
 
   final TableSnapshot snap;
   final String clockLabel;
 
   @override
   Widget build(BuildContext context) {
-    final beat = snap.beats.isEmpty ? null : snap.beats.first;
+    final beat = _currentBeat(snap);
     final title = snap.revealIndex < kRevealSetNames.length
         ? kRevealSetNames[snap.revealIndex]
         : 'Set ${snap.revealIndex + 1}';
@@ -33,16 +31,12 @@ class RevealTable extends StatelessWidget {
         .where((seat) => seat.you)
         .map((seat) => seat.name)
         .firstOrNull;
-    final remaining = (3 - snap.revealIndex).clamp(0, 4);
     final seats = [
       for (final seat in snap.seats)
         TableSeatInfo(
           name: seat.name,
-          detail: snap.scores.length > seat.seat
-              ? '${snap.scores[seat.seat]} pts'
-              : '',
+          detail: '+${capturedBy(snap.beats, seat.name)}',
           you: seat.you,
-          remainingSets: remaining,
           reconnecting: seat.status == 'reconnecting',
           dealer: snap.dealer == seat.seat,
           host: seat.host,
@@ -76,7 +70,7 @@ class RevealTable extends StatelessWidget {
                       HindiLine(kHindiSetNames[snap.revealIndex], size: 13),
                     const SizedBox(height: 4),
                     Text(
-                      '$clockLabel · the table moves on together',
+                      'Check the cards. $clockLabel left on this set.',
                       style: const TextStyle(color: HazaraColors.creamMuted),
                     ),
                     if (beat != null) ...[
@@ -93,14 +87,30 @@ class RevealTable extends StatelessWidget {
                     const SizedBox(height: 8),
                     Expanded(
                       child: PlayTable(
-                        seats: ring,
+                        seats: const [],
                         center: _Centre(
-                          key: ValueKey('reveal-${snap.dealNo}-${snap.revealIndex}'),
+                          key: ValueKey(
+                            'reveal-${snap.dealNo}-${snap.revealIndex}',
+                          ),
                           beat: beat,
+                          seats: ring,
                           reduce: reduce,
                         ),
                       ),
                     ),
+                    if (beat != null) ...[
+                      const SizedBox(height: 8),
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxHeight: 240),
+                        child: SingleChildScrollView(
+                          child: SetScorePanel(
+                            beat: beat,
+                            revealed: snap.beats,
+                            revealIndex: snap.revealIndex,
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -126,15 +136,31 @@ class RevealTable extends StatelessWidget {
   }
 }
 
+BeatView? _currentBeat(TableSnapshot snap) {
+  if (snap.beats.isEmpty) return null;
+  final index = snap.revealIndex;
+  if (index >= 0 && index < snap.beats.length) return snap.beats[index];
+  return snap.beats.last;
+}
+
 class _Centre extends StatelessWidget {
   const _Centre({
     super.key,
     required this.beat,
+    required this.seats,
     required this.reduce,
   });
 
   final BeatView? beat;
+  final List<TableSeatInfo> seats;
   final bool reduce;
+
+  TableSeatInfo? _seat(String name) {
+    for (final seat in seats) {
+      if (seat.name == name) return seat;
+    }
+    return null;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -161,32 +187,20 @@ class _Centre extends StatelessWidget {
       },
       child: FittedBox(
         fit: BoxFit.scaleDown,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 280),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              for (var i = 0; i < beat.rows.length; i++)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 6),
-                  child: _RowSet(
-                    row: beat.rows[i],
-                    winner: beat.rows[i].name == beat.winner,
-                    delayMs: reduce ? 0 : 80 * i,
-                  ),
-                ),
-              Text(
-                beat.tied
-                    ? '${beat.winner} captures ${beat.points} (later seat)'
-                    : '${beat.winner} captures ${beat.points}',
-                style: const TextStyle(
-                  color: HazaraColors.cream,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (var i = 0; i < beat.rows.length; i++)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: _RowSet(
+                  row: beat.rows[i],
+                  seat: _seat(beat.rows[i].name),
+                  winner: beat.rows[i].name == beat.winner,
+                  delayMs: reduce ? 0 : 80 * i,
                 ),
               ),
-            ],
-          ),
+          ],
         ),
       ),
     );
@@ -196,44 +210,128 @@ class _Centre extends StatelessWidget {
 class _RowSet extends StatelessWidget {
   const _RowSet({
     required this.row,
+    required this.seat,
     required this.winner,
     required this.delayMs,
   });
 
   final BeatRow row;
+  final TableSeatInfo? seat;
   final bool winner;
   final int delayMs;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    final who = seat?.you == true ? '${row.name} (you)' : row.name;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Text(
-          '${row.name} · ${row.label}',
-          style: TextStyle(
-            fontSize: 11,
-            fontWeight: winner ? FontWeight.w800 : FontWeight.w600,
-            color: winner ? HazaraColors.gold : HazaraColors.creamMuted,
-          ),
-        ),
-        const SizedBox(height: 3),
-        Row(
-          mainAxisSize: MainAxisSize.min,
+        _SeatMark(seat: seat, name: row.name, winner: winner),
+        const SizedBox(width: 8),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            for (var c = 0; c < row.cards.length; c++)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 2),
-                child: FlipRevealCard(
-                  card: row.cards[c],
-                  width: 36,
-                  dimmed: row.spareId == row.cards[c].id,
-                  glow: winner && row.spareId != row.cards[c].id,
-                  delay: Duration(milliseconds: delayMs + c * 60),
-                ),
+            Text(
+              '$who · ${row.label}',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: winner ? FontWeight.w800 : FontWeight.w600,
+                color: winner ? HazaraColors.gold : HazaraColors.creamMuted,
               ),
+            ),
+            const SizedBox(height: 3),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (var c = 0; c < row.cards.length; c++)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 2),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        FlipRevealCard(
+                          card: row.cards[c],
+                          width: 36,
+                          dimmed: row.spareId == row.cards[c].id,
+                          glow: winner && row.spareId != row.cards[c].id,
+                          delay: Duration(milliseconds: delayMs + c * 60),
+                        ),
+                        Text(
+                          '${row.cards[c].points}',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                            color: row.cards[c].points == 10
+                                ? HazaraColors.gold
+                                : HazaraColors.creamMuted,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
           ],
         ),
       ],
+    );
+  }
+}
+
+class _SeatMark extends StatelessWidget {
+  const _SeatMark({
+    required this.seat,
+    required this.name,
+    required this.winner,
+  });
+
+  final TableSeatInfo? seat;
+  final String name;
+  final bool winner;
+
+  @override
+  Widget build(BuildContext context) {
+    final index = seat?.avatar ?? (name.hashCode.abs() % kAvatarCount);
+    return SizedBox(
+      width: 44,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              AvatarChip(index: index, size: 32),
+              if (seat?.dealer == true)
+                const Positioned(
+                  right: -4,
+                  top: -4,
+                  child: CircleAvatar(
+                    radius: 7,
+                    backgroundColor: HazaraColors.gold,
+                    child: Text(
+                      'D',
+                      style: TextStyle(
+                        fontSize: 9,
+                        color: HazaraColors.ink,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          if (seat != null && seat!.detail.isNotEmpty)
+            Text(
+              seat!.detail,
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                color: winner ? HazaraColors.gold : HazaraColors.creamMuted,
+              ),
+            ),
+        ],
+      ),
     );
   }
 }
